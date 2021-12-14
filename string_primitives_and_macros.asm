@@ -28,6 +28,29 @@ mDisplayString	MACRO	display_string
 
 ENDM
 
+;---------------------------------------------------------------------------------
+;
+;
+;
+;
+;
+;
+;---------------------------------------------------------------------------------
+
+mGetString  MACRO   prompt, inputStr, numChar, strLen
+	
+	MOV	EDX, 0					; Reset EDX.
+	MOV	EAX, 0					; Reset EDX.
+	
+	MOV	EDX, prompt
+	CALL	WriteString
+	MOV	EDX, inputStr
+	MOV	ECX, numChar
+	CALL	ReadString
+	MOV	strLen, EAX
+	
+ENDM
+
 ; (insert constant definitions here)
 
 	MAXSIZE = 12					; Including a unary operator and null.			
@@ -58,10 +81,14 @@ ENDM
 	
 	inString	BYTE	MAXSIZE DUP(?)		; ReadString stores input integer as ASCII.
 	inNumArray	SDWORD	10 DUP(?)		; Array for integers (not ASCII).
-
+	
+	sLen		SDWORD	?
+	tempNum		SDWORD	?
+	numInt		SDWORD	?
 	numSum		SDWORD	?
 	numAve		SDWORD	?
 	numCount	SDWORD	10
+
 	
 .code
 ;---------------------------------------------------------------------------------
@@ -80,8 +107,42 @@ main PROC
 	PUSH	OFFSET introMsg2			
 	PUSH	OFFSET introMsg3			
 	CALL	introduction
+	
+	
+	MOV	ECX, numCount
+	MOV	EDI, OFFSET inNumArray
+_numinput:
+	PUSH	ECX
+	
+	PUSH	tempNum
+	PUSH	numInt
+	PUSH	OFFSET numCount
+	PUSH	OFFSET inNumArray
+	PUSH	OFFSET errorMsg1
+	PUSH	OFFSET errorMsg2
+	PUSH	OFFSET numPrompt
+	PUSH	MAXSIZE
+	PUSH	OFFSET inString
+	PUSH	OFFSET sLen
+	CALL	readVal
+	
+	MOV	[EDI], EAX
+	ADD	EDI, 4
+	
+	POP	ECX					; Restore ECX value for numInput loop.
+	LOOP	_numInput
+	CALL	CrLf
+	
+	;This test loop shows that the ASCII versions of the user inputs are converted as integers/are stored in inNumArray correctly.
+	;MOV	ECX, numCount
+	;MOV	EDI, OFFSET inNumArray
+	;_testLoop:
+	;MOV	EAX, [EDI]
+	;CALL	WriteInt
+	;ADD	EDI, 4
+	;LOOP	_testLoop
 
-	Invoke ExitProcess,0		; Exit to operating system.
+	Invoke ExitProcess,0				; Exit to operating system.
 main ENDP
 
 ; (insert additional procedures here)
@@ -107,26 +168,133 @@ introduction	PROC
 	MOV	EBP, ESP
 	
 	CALL	CrLf
-	mDisplayString [EBP + 24]	; OFFSET programTitle
+	mDisplayString [EBP + 24]	; OFFSET programTitle.
 	CALL	CrLf
 	
-	mDisplayString [EBP + 20]	; OFFSET programmerName
-	CALL	CrLf
-	CALL	CrLf
-	
-	mDisplayString [EBP + 16]	; OFFSET introMsg1
+	mDisplayString [EBP + 20]	; OFFSET programmerName.
 	CALL	CrLf
 	CALL	CrLf
 	
-	mDisplayString [EBP + 12]	; OFFSET introMsg2
+	mDisplayString [EBP + 16]	; OFFSET introMsg1.
+	CALL	CrLf
 	CALL	CrLf
 	
-	mDisplayString [EBP + 8]	; OFFSET introMsg3
+	mDisplayString [EBP + 12]	; OFFSET introMsg2.
+	CALL	CrLf
+	
+	mDisplayString [EBP + 8]	; OFFSET introMsg3.
 	CALL	CrLf
 	
 	POP	EBP			; Restore the register.
 	RET	20
 	
 introduction	ENDP
+
+;---------------------------------------------------------------------------------
+;
+;
+;
+;
+;
+;
+;---------------------------------------------------------------------------------
+
+readVal		PROC
+
+	PUSH	EBP			; Build stack frame.
+	MOV	EBP, ESP
+
+_getNum:
+	MOV	EAX, 0
+	MOV	EBX, 0
+	MOV	ECX, 0
+	
+	MOV	EAX, [EBP + 40]
+	IMUL	EBX
+	MOV	[EBP + 40], EAX
+
+	mGetString	[EBP + 20], [EBP + 12], [EBP + 16], [EBP + 8]
+
+	MOV	ESI, [EBP + 12]		; inString to ESI.
+										
+	MOV	ECX, [EBP + 8]		; Length of the string entered.
+	JMP	_validateIfUnary
+
+_invalidEntry:
+	CALL	CrLf
+	mDisplayString [EBP + 28]
+	CALL	CrLf
+	mDisplayString [EBP + 24]
+	CALL	CrLf
+	CALL	CrLf
+	JMP	_getNum
+
+_validateIfUnary:			; Checking - or + sign.
+	CLD
+	LODSB
+	CMP	AL, 45
+	JE	_negativeInt
+	CMP	AL, 43
+	JE	_positiveInt
+	JMP	_positiveIntNoUnary
+
+_positiveInt:	
+	DEC	ECX			; Because the first character was a unary symbol.
+
+	_positiveIntLoop:
+		MOV	EAX, 0
+		LODSB
+
+		_positiveIntNoUnary:
+			CMP	AL, 48						; 0 is 48 in ASCII.
+			JB	_invalidEntry
+			CMP	AL, 57						; 9 is 57 in ASCII.
+			JA	_invalidEntry
+			
+			SUB	EAX, 48						; Algorithm to convert from ASCII representation to numeric value.
+			MOV	[EBP + 44], EAX					
+			MOV	EAX, [EBP + 40]					
+			MOV	EBX, 10
+			IMUL	EBX
+			ADD	EAX, [EBP + 44]					
+			JO	_invalidEntry					
+			MOV	[EBP + 40], EAX					
+			LOOP	_positiveIntLoop
+	JMP	_done
+
+
+_negativeInt:	
+	DEC	ECX								; Because the first character was a unary symbol.
+
+	_negativeIntLoop:
+		MOV	EAX, 0
+		LODSB
+
+		_negativeIntNoUnary:
+			CMP	AL, 48						; 0 is 48 in ASCII.
+			JB	_invalidEntry
+			CMP	AL, 57						; 9 is 57 in ASCII.
+			JA	_invalidEntry
+
+			SUB	EAX, 48						; Algorithm to convert from ASCII representation to numeric value.
+			MOV	[EBP + 44], EAX					
+			MOV	EAX, [EBP + 40]					
+			MOV	EBX, 10
+			IMUL	EBX
+			ADD	EAX, [EBP + 44]					
+			JO	_invalidEntry					
+			MOV	[EBP + 40], EAX				
+			JO	_invalidEntry					
+			LOOP	_negativeIntLoop
+
+			NEG	EAX						; Negate the number.
+			MOV	[EBP + 40], EAX
+	JMP	_done
+
+_done:
+	POP	EBP			; Restore the register.
+	RET 	40
+
+readVal		ENDP
 
 END main
