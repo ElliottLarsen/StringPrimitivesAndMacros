@@ -81,6 +81,9 @@ ENDM
 	
 	inString	BYTE	MAXSIZE DUP(?)		; ReadString stores input integer as ASCII.
 	inNumArray	SDWORD	10 DUP(?)		; Array for integers (not ASCII).
+	tempStr		BYTE	MAXSIZE	DUP(?)		;
+	outStr		BYTE	MAXSIZE DUP(?)		;
+	resetStr	BYTE	MAXSIZE DUP(?)		;
 	
 	sLen		SDWORD	?
 	tempNum		SDWORD	?
@@ -88,6 +91,7 @@ ENDM
 	numSum		SDWORD	?
 	numAve		SDWORD	?
 	numCount	SDWORD	10
+	counter		SDWORD	0
 
 	
 .code
@@ -141,6 +145,17 @@ _numinput:
 	;CALL	WriteInt
 	;ADD	EDI, 4
 	;LOOP	_testLoop
+	
+	PUSH	OFFSET inNumArray
+	PUSH	OFFSET tempStr
+	PUSH	OFFSET outStr
+	PUSH	OFFSET resetStr
+	PUSH	OFFSET negativeSign
+	PUSH	OFFSET commaSpace
+	PUSH	OFFSET inputNumMsg
+	PUSH	counter
+	PUSH	numCount
+	CALL	writeVal
 
 	Invoke ExitProcess,0				; Exit to operating system.
 main ENDP
@@ -296,5 +311,88 @@ _done:
 	RET 	40
 
 readVal		ENDP
+
+;---------------------------------------------------------------------------------
+;
+;
+;
+;
+;
+;
+;---------------------------------------------------------------------------------
+
+writeVal	PROC
+
+	PUSH	EBP			; Build stack frame.
+	MOV	EBP, ESP
+	
+	MOV	ESI, [EBP + 40]		; inNumArray to ESI.
+	MOV	EDI, [EBP + 36] 	; tempStr to EDI.
+	MOV	ECX, [EBP + 8]		; numCount to ECX to go over all elements in the list.
+	
+_outLoop:
+	MOV	EAX, [ESI]		; Array element to EAX.
+	PUSH	ECX
+	PUSH	EDI
+	PUSH	ESI
+	MOV	ECX, [EBP + 12]		; counter to ECX.
+	
+_convertToStr:
+
+	CMP	EAX, 0
+	JS	_negative
+	JE	_finishConvert
+	INC	ECX
+	MOV	EDX, 0
+	MOV	EBX, 10
+	CDQ
+	IDIV	EBX
+	
+	MOV	EBX, EDX		; Remainder to EBX.
+	ADD	EBX, 48			; Algorithm to convert from integer to ASCII representation of numbers.
+	PUSH	EAX			; Preserve register.
+	
+	MOV	EAX, EBX
+	STOSB
+	POP	EAX
+	JMP	_convertToStr
+	
+_finishConvert:
+	MOV	ESI, [EBP + 36]		; tempStr to ESI.
+	ADD	ESI, ECX
+	DEC	ESI
+	MOV	EDI, [EBP + 32]		; outStr to EDI.
+	
+		_revLoop:
+			STD
+			LODSB
+			CLD
+			STOSB
+			LOOP	_revLoop
+	mDisplayString [EBP + 32]	; outStr.
+	mDisplayString [EBP + 20]	; commaSpace.
+	
+	PUSH	ESI
+	PUSH	ECX
+	MOV	ESI, [EBP + 28]		; resetStr.
+	MOV	EDI, [EBP + 32]		; outStr so that outStr can be cleared.
+	MOV	ECX, 12			; CHECK THIS LATER.
+	
+	REP	MOVSB
+	
+	POP	ECX
+	POP	ESI
+	POP	ESI
+	ADD 	ESI, 4
+	POP	EDI
+	POP	ECX
+	LOOP	_outLoop
+
+_negative:
+
+	POP	EBP
+	RET	36
+
+writeVal	ENDP
 
 END main
