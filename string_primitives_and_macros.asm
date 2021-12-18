@@ -146,7 +146,14 @@ _numinput:
 	;ADD	EDI, 4
 	;LOOP	_testLoop
 	
-	PUSH	OFFSET inNumArray
+	MOV	ECX, numCount
+	MOV	ESI, OFFSET inNumArray
+	mDisplayString	OFFSET inputNumMsg
+	CALL	CrLf
+	
+_writeValLoop:
+	PUSH	ECX
+	
 	PUSH	OFFSET tempStr
 	PUSH	OFFSET outStr
 	PUSH	OFFSET resetStr
@@ -154,8 +161,11 @@ _numinput:
 	PUSH	OFFSET commaSpace
 	PUSH	OFFSET inputNumMsg
 	PUSH	counter
-	PUSH	numCount
 	CALL	writeVal
+	
+	ADD	ESI, 4
+	POP	ECX
+	LOOP	_writeValLoop
 
 	Invoke ExitProcess,0				; Exit to operating system.
 main ENDP
@@ -326,72 +336,108 @@ writeVal	PROC
 	PUSH	EBP			; Build stack frame.
 	MOV	EBP, ESP
 	
-	MOV	ESI, [EBP + 40]		; inNumArray to ESI.
-	MOV	EDI, [EBP + 36] 	; tempStr to EDI.
-	MOV	ECX, [EBP + 8]		; numCount to ECX to go over all elements in the list.
-	
-_outLoop:
-	MOV	EAX, [ESI]		; Array element to EAX.
-	PUSH	ECX
-	PUSH	EDI
+	MOV	EDI, [EBP + 32]		; tempStr to EDI.
+	MOV	ECX, [EBP + 8]		; counter to ECX.
+	MOV	EAX, [ESI]		; Array elements to EAX.
+	PUSH	EDI			; Reserve registers.
 	PUSH	ESI
-	MOV	ECX, [EBP + 12]		; counter to ECX.
+
+	CMP	EAX, 0			
+	JS	_negate			; If the number is negative.
 	
 _convertToStr:
-
 	CMP	EAX, 0
-	JS	_negative
 	JE	_finishConvert
 	INC	ECX
-	MOV	EDX, 0
+	MOV	EDX, 0			; Algorithm/calculation to convert a number (int) to ASCII representation.
 	MOV	EBX, 10
 	CDQ
 	IDIV	EBX
-	
-	MOV	EBX, EDX		; Remainder to EBX.
-	ADD	EBX, 48			; Algorithm to convert from integer to ASCII representation of numbers.
-	PUSH	EAX			; Preserve register.
-	
+
+	MOV	EBX, EDX		
+	ADD	EBX, 48
+	PUSH	EAX
+
 	MOV	EAX, EBX
 	STOSB
 	POP	EAX
-	JMP	_convertToStr
-	
+	JMP _convertToStr
+
 _finishConvert:
-	MOV	ESI, [EBP + 36]		; tempStr to ESI.
+	MOV	ESI, [EBP + 32]		; tempStr to ESI.
 	ADD	ESI, ECX
 	DEC	ESI
-	MOV	EDI, [EBP + 32]		; outStr to EDI.
-	
+	MOV	EDI, [EBP + 28]		; outStr to ESI.
+
 		_revLoop:
 			STD
 			LODSB
 			CLD
 			STOSB
 			LOOP	_revLoop
-	mDisplayString [EBP + 32]	; outStr.
-	mDisplayString [EBP + 20]	; commaSpace.
+			
+	mDisplayString [EBP + 28]
+	mDisplayString [EBP + 16]	; commaSpace.
+
+	PUSH	ESI			; Preserve register.
+	MOV	ESI, [EBP + 24]		; resetStr to ESI.
+	MOV	EDI, [EBP + 28]		; outStr to EDI.
+	MOV	ECX, 12
+	REP	MOVSB			; Clears outStr.
+	POP	ESI			; Restore register.
+	JMP	_done
+
+_negate:
+	NEG	EAX			; Negative number.
+
+_convertToStrNegative:
+	CMP	EAX, 0
+	JE	_finishConvertNegative
+	INC	ECX
+	MOV	EDX, 0			; Algorithm/calculation to convert a number (int) to ASCII representation.
+	MOV	EBX, 10
+	CDQ
+	IDIV	EBX
+
+	MOV	EBX, EDX
+	ADD	EBX, 48
+	PUSH	EAX
+
+	MOV	EAX, EBX
+	STOSB
+	POP	EAX
+	JMP _convertToStrNegative
+
+_finishConvertNegative:
+	MOV	ESI, [EBP + 32]		; tempStr to ESI.
+	ADD	ESI, ECX
+	DEC	ESI
+	MOV	EDI, [EBP + 28]		; outStr to ESI.
+
+		_revLoopNegative:
+			STD
+			LODSB
+			CLD
+			STOSB
+			LOOP	_revLoopNegative
+			
+	mDisplayString [EBP + 20]	; negativeSign.
+	mDisplayString [EBP + 28]	
+	mDisplayString [EBP + 16]	; commaSpace.
+
+	PUSH	ESI			; Preserve register.
+	MOV	ESI, [EBP + 24]		; resetStr to ESI.
+	MOV	EDI, [EBP + 28]		; outStr to EDI.
+	MOV	ECX, 12
+	REP	MOVSB			; Clears outStr.
+	POP	ESI			; Restore register.
+	JMP	_done
 	
-	PUSH	ESI
-	PUSH	ECX
-	MOV	ESI, [EBP + 28]		; resetStr.
-	MOV	EDI, [EBP + 32]		; outStr so that outStr can be cleared.
-	MOV	ECX, 12			; CHECK THIS LATER.
-	
-	REP	MOVSB
-	
-	POP	ECX
-	POP	ESI
-	POP	ESI
-	ADD 	ESI, 4
+_done:
+	POP	ESI			; Restore registers.
 	POP	EDI
-	POP	ECX
-	LOOP	_outLoop
-
-_negative:
-
 	POP	EBP
-	RET	36
+	RET	28
 
 writeVal	ENDP
 
