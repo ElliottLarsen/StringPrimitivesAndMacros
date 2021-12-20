@@ -92,6 +92,7 @@ ENDM
 	numAve		SDWORD	?
 	numCount	SDWORD	10
 	counter		SDWORD	0
+	isLastNum	SDWORD	0
 
 	
 .code
@@ -147,6 +148,7 @@ _numinput:
 	;LOOP	_testLoop
 	
 	MOV	ECX, numCount
+	DEC	ECX
 	MOV	ESI, OFFSET inNumArray
 	mDisplayString	OFFSET inputNumMsg
 	CALL	CrLf
@@ -159,13 +161,23 @@ _writeValLoop:
 	PUSH	OFFSET resetStr
 	PUSH	OFFSET negativeSign
 	PUSH	OFFSET commaSpace
-	PUSH	OFFSET inputNumMsg
 	PUSH	counter
+	PUSH	isLastNum
 	CALL	writeVal
 	
 	ADD	ESI, 4
 	POP	ECX
 	LOOP	_writeValLoop
+	
+	INC	isLastNum
+	PUSH	OFFSET tempStr
+	PUSH	OFFSET outStr
+	PUSH	OFFSET resetStr
+	PUSH	OFFSET negativeSign
+	PUSH	OFFSET commaSpace
+	PUSH	counter
+	PUSH	isLastNum
+	CALL	WriteVal
 
 	Invoke ExitProcess,0				; Exit to operating system.
 main ENDP
@@ -337,7 +349,7 @@ writeVal	PROC
 	MOV	EBP, ESP
 	
 	MOV	EDI, [EBP + 32]		; tempStr to EDI.
-	MOV	ECX, [EBP + 8]		; counter to ECX.
+	MOV	ECX, [EBP + 12]		; counter to ECX.
 	MOV	EAX, [ESI]		; Array elements to EAX.
 	PUSH	EDI			; Reserve registers.
 	PUSH	ESI
@@ -377,7 +389,6 @@ _finishConvert:
 			LOOP	_revLoop
 			
 	mDisplayString [EBP + 28]
-	mDisplayString [EBP + 16]	; commaSpace.
 
 	PUSH	ESI			; Preserve register.
 	MOV	ESI, [EBP + 24]		; resetStr to ESI.
@@ -385,7 +396,11 @@ _finishConvert:
 	MOV	ECX, 12
 	REP	MOVSB			; Clears outStr.
 	POP	ESI			; Restore register.
-	JMP	_done
+	
+	MOV	EAX, [EBP + 8]		; isLastNum to EAX for comparison.
+	CMP	EAX, 0	
+	JE	_insertCommaSpace
+	JNE	_done
 
 _negate:
 	NEG	EAX			; Negative number.
@@ -423,7 +438,6 @@ _finishConvertNegative:
 			
 	mDisplayString [EBP + 20]	; negativeSign.
 	mDisplayString [EBP + 28]	
-	mDisplayString [EBP + 16]	; commaSpace.
 
 	PUSH	ESI			; Preserve register.
 	MOV	ESI, [EBP + 24]		; resetStr to ESI.
@@ -431,8 +445,15 @@ _finishConvertNegative:
 	MOV	ECX, 12
 	REP	MOVSB			; Clears outStr.
 	POP	ESI			; Restore register.
-	JMP	_done
 	
+	MOV	EAX, [EBP + 8]		; isLastNum to EAX for comparison.
+	CMP	EAX, 0
+	JE	_insertCommaSpace
+	JNE	_done
+
+_insertCommaSpace:
+	mDisplayString [EBP + 16]	; commaSpace.
+
 _done:
 	POP	ESI			; Restore registers.
 	POP	EDI
