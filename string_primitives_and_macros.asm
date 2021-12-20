@@ -356,6 +356,18 @@ writeVal	PROC
 
 	CMP	EAX, 0			
 	JS	_negate			; If the number is negative.
+	JNE	_convertToStr
+	
+	MOV	EDX, 0			; If the entered value is 0, then convert it to ASCII representation.
+	MOV	EBX, 10			; The program will terminate otherwise because 0 is read as a null character.
+	CDQ
+	IDIV	EBX
+	MOV	EBX, EDX
+	ADD	EBX, 48
+	MOV	EAX, EBX
+	STOSB
+	ADD	ECX, 1
+	JMP	_finishConvert
 	
 _convertToStr:
 	CMP	EAX, 0
