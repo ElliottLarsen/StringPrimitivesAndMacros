@@ -178,6 +178,18 @@ _writeValLoop:
 	PUSH	counter
 	PUSH	isLastNum
 	CALL	WriteVal
+	CALL	CrLf
+	CALL	CrLf
+	
+	PUSH	OFFSET inNumArray
+	PUSH	OFFSET sumNumMsg
+	PUSH	OFFSET tempStr
+	PUSH	OFFSET outStr
+	PUSH	OFFSET resetStr
+	PUSH	OFFSET negativeSign
+	PUSH	numCount
+	PUSH	numSum
+	CALL	numSumDisplay
 
 	Invoke ExitProcess,0				; Exit to operating system.
 main ENDP
@@ -473,5 +485,148 @@ _done:
 	RET	28
 
 writeVal	ENDP
+
+;---------------------------------------------------------------------------------
+;
+;
+;
+;
+;
+;
+;---------------------------------------------------------------------------------
+
+numSumDisplay	PROC
+
+	PUSH	EBP			; Build stack frame.
+	MOV	EBP, ESP
+	
+	MOV	EAX, [EBP + 8]		; numSum to EAX.
+	MOV	ESI, [EBP + 36]		; inNumArray element to ESI.
+	MOV	ECX, [EBP + 12]		; numCount to ECX.
+	
+	_sumLoop:
+		ADD	EAX, [ESI]
+		ADD	ESI, 4
+		LOOP	_sumLoop
+	
+	MOV	[EBP + 8], EAX		; Total sum of numbers (integer) to numSum.
+	MOV	EDI, [EBP + 28]		; tempStr to EDI.	
+	MOV	ECX, 0
+	
+	PUSH	EDI
+	PUSH	ESI
+	
+	CMP	EAX, 0			
+	JS	_negate
+	JNE	_convertToStr
+	
+	MOV	EDX, 0			; If the total sum is 0, convert to ASCII representation of the number.
+	MOV	EBX, 10			; Otherwise, the program exits because 0 is read as a null character.
+	CDQ
+	IDIV	EBX
+	MOV	EBX, EDX
+	ADD	EBX, 48
+	MOV	EAX, EBX
+	STOSB
+	ADD	ECX, 1
+	JMP	_finishConvert
+	
+_convertToStr:
+	
+	CMP	EAX, 0
+	JE	_finishConvert
+	INC	ECX
+	MOV	EDX, 0
+	MOV	EBX, 10
+	CDQ
+	IDIV	EBX
+	
+	MOV	EBX, EDX
+	ADD	EBX, 48
+	PUSH	EAX
+	MOV	EAX, EBX
+	STOSB
+	POP	EAX
+	JMP	_convertToStr
+	
+_finishConvert:
+	MOV	ESI, [EBP + 28]		; tempStr to ESI.
+	ADD	ESI, ECX
+	DEC	ESI
+	MOV	EDI, [EBP + 24]		; outStr to EDI.
+	
+	_revLoop:
+		STD
+		LODSB
+		CLD
+		STOSB
+		LOOP	_revLoop
+		
+	mDisplayString [EBP + 32]	; sumNumMsg.
+	mDisplayString [EBP + 24]	
+	
+	PUSH	ESI			; Preserve register.
+	MOV	ESI, [EBP + 20]		; resetStr to ESI.
+	MOV	EDI, [EBP + 24]		; outStr to EDI.
+	MOV	ECX, 12
+	REP	MOVSB			; Clears outStr.
+	POP	ESI			; Restore register.
+	
+	POP	ESI
+	POP	EDI
+	JMP	_done
+
+_negate:
+	NEG	EAX
+	
+_convertToStrNegative:
+	CMP	EAX, 0
+	JE	_finishConvertNegative
+	INC	ECX
+	MOV	EDX, 0
+	MOV	EBX, 10
+	CDQ
+	IDIV	EBX
+	
+	MOV	EBX, EDX
+	ADD	EBX, 48
+	PUSH	EAX
+	MOV	EAX, EBX
+	STOSB
+	POP	EAX
+	JMP	_convertToStrNegative
+	
+_finishConvertNegative:
+	MOV	ESI, [EBP + 28]		; tempStr to ESI.
+	ADD	ESI, ECX
+	DEC	ESI
+	MOV	EDI, [EBP + 24]		; outStr to EDI.
+	
+	_revLoopNegative:
+		STD
+		LODSB
+		CLD
+		STOSB
+		LOOP	_revLoopNegative
+		
+	mDisplayString [EBP + 32]	; sumNumMsg.
+	mDisplayString [EBP + 16] 	; negativeSign.
+	mDisplayString [EBP + 24]	
+	
+	PUSH	ESI			; Preserve register.
+	MOV	ESI, [EBP + 20]		; resetStr to ESI.
+	MOV	EDI, [EBP + 24]		; outStr to EDI.
+	MOV	ECX, 12
+	REP	MOVSB			; Clears outStr.
+	POP	ESI			; Restore register.
+	
+	POP	ESI
+	POP	EDI
+	
+_done:
+	POP	EBP			; Restore register.
+	RET	32
+
+numSumDisplay	ENDP
 
 END main
