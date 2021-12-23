@@ -77,7 +77,7 @@ ENDM
 	commaSpace	BYTE	", ", 0
 	negativeSign	BYTE	"-", 0
 	positiveSign	BYTE	"+", 0
-	goodByeMsg	BYTE	"Thank you for using this program.  Goodbye!", 0
+	goodbyeMsg	BYTE	"Thank you for using this program.  Goodbye!", 0
 	
 	inString	BYTE	MAXSIZE DUP(?)		; ReadString stores input integer as ASCII.
 	inNumArray	SDWORD	10 DUP(?)		; Array for integers (not ASCII).
@@ -201,6 +201,12 @@ _writeValLoop:
 	PUSH	numcount
 	PUSH	numAve
 	CALL	numAveDisplay
+	CALL	CrLf
+	CALL	CrLf
+	
+	PUSH	OFFSET goodbyeMsg
+	CALL	farewell
+	CALL	CrLf
 
 	Invoke ExitProcess,0				; Exit to operating system.
 main ENDP
@@ -787,6 +793,27 @@ _done:
 	RET	32	
 
 numAveDisplay	ENDP
+
+;---------------------------------------------------------------------------------
+;
+;
+;
+;
+;
+;
+;---------------------------------------------------------------------------------
+
+farewell	PROC
+
+	PUSH	EBP			; Build stack frame.
+	MOV	EBP, ESP
+	
+	mDisplayString [EBP + 8]
+	
+	POP	EBP
+	RET	4
+
+farewell	ENDP
 
 
 END main
