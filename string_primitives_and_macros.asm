@@ -1,20 +1,27 @@
 TITLE String Primitives and Macros     (string_primitives_and_macros.asm)
 
 ; Author: Elliott Larsen
-; Date:
-; Description: 
+; Date: 12/23/2021
+; Description: This program receives signed integers as strings (ASCII representation of numbers) using mGetString (macro),
+;	       converts them to integers (numeric value), and saves them to an array.  It then calculates the sum and truncated
+;	       average (integer part only) of the input numbers.  Finally, it converts integers (numeric) back to strings (ASCII)
+;	       and shows the list of numbers entered, their sum, and their truncated average.  The program ends with a farewell
+;	       message.
 
 INCLUDE Irvine32.inc
 
-; (insert macro definitions here)
-
 ;---------------------------------------------------------------------------------
+; Name: mDisplayString
 ;
+; Displays the string.
 ;
+; Preconditions: String to be displayed is passed to it.
 ;
+; Postconditions: The string is displayed and EDX holds the OFFSET to the string.
 ;
+; Receives: OFFSET of the string to be displayed and EDX.
 ;
-;
+; Returns: EDX value is restored.
 ;---------------------------------------------------------------------------------
 
 mDisplayString	MACRO	display_string
@@ -29,12 +36,21 @@ mDisplayString	MACRO	display_string
 ENDM
 
 ;---------------------------------------------------------------------------------
+; Name: mGetString
 ;
+; Receives a string from the user.  In this case, it is an ASCII representation
+;	of signed integers.
 ;
+; Preconditions: prompt, inputStr, numChar, and strLen are on the stack.
 ;
+; Postconditions: Prompt message is displayed and it receives a string.  EDX takes
+;	the offset of the prompt string, ECX takes the buffer size, and EAX has the
+;	number of characters it received.
 ;
+; Receives: prompt, inputStr, numChar, strLen, EDX, EAX, and ECX.
 ;
-;
+; Returns: strLen passed to this macro from the stack now has the number of
+;	characters it received.
 ;---------------------------------------------------------------------------------
 
 mGetString  MACRO   prompt, inputStr, numChar, strLen
@@ -51,15 +67,11 @@ mGetString  MACRO   prompt, inputStr, numChar, strLen
 	
 ENDM
 
-; (insert constant definitions here)
-
 	MAXSIZE = 12					; Including a unary operator and null.			
 	SDWORDLO = -2147483648
 	SDWORDHI = +2147483647
 
 .data
-
-; (insert variable definitions here)
 
 	programTitle	BYTE	"String Primitives and Macros", 0
 	programmerName	BYTE	"By Elliott Larsen", 0
@@ -93,7 +105,6 @@ ENDM
 	numCount	SDWORD	10
 	counter		SDWORD	0
 	isLastNum	SDWORD	0
-
 	
 .code
 ;---------------------------------------------------------------------------------
@@ -101,9 +112,8 @@ ENDM
 ; 
 ; Sets up and calls other procedures.
 ;---------------------------------------------------------------------------------
-main PROC
 
-; (insert executable instructions here)
+main PROC
 
 	; parameters and procedure call for introduction
 	PUSH	OFFSET programTitle			
@@ -113,9 +123,10 @@ main PROC
 	PUSH	OFFSET introMsg3			
 	CALL	introduction
 	
-	
+	; readVal
 	MOV	ECX, numCount
 	MOV	EDI, OFFSET inNumArray
+	
 _numinput:
 	PUSH	ECX
 	
@@ -138,15 +149,7 @@ _numinput:
 	LOOP	_numInput
 	CALL	CrLf
 	
-	;This test loop shows that the ASCII versions of the user inputs are converted as integers/are stored in inNumArray correctly.
-	;MOV	ECX, numCount
-	;MOV	EDI, OFFSET inNumArray
-	;_testLoop:
-	;MOV	EAX, [EDI]
-	;CALL	WriteInt
-	;ADD	EDI, 4
-	;LOOP	_testLoop
-	
+	; writeVal
 	MOV	ECX, numCount
 	DEC	ECX
 	MOV	ESI, OFFSET inNumArray
@@ -169,6 +172,7 @@ _writeValLoop:
 	POP	ECX
 	LOOP	_writeValLoop
 	
+	; writeVal for the last number
 	INC	isLastNum
 	PUSH	OFFSET tempStr
 	PUSH	OFFSET outStr
@@ -177,10 +181,11 @@ _writeValLoop:
 	PUSH	OFFSET commaSpace
 	PUSH	counter
 	PUSH	isLastNum
-	CALL	WriteVal
+	CALL	writeVal
 	CALL	CrLf
 	CALL	CrLf
 	
+	; numSumDisplay
 	PUSH	OFFSET inNumArray
 	PUSH	OFFSET sumNumMsg
 	PUSH	OFFSET tempStr
@@ -192,6 +197,7 @@ _writeValLoop:
 	CALL	numSumDisplay
 	CALL	CrLf
 	
+	; numAveDisplay
 	PUSH	OFFSET inNumArray
 	PUSH	OFFSET aveNumMsg
 	PUSH	OFFSET tempStr
@@ -204,14 +210,14 @@ _writeValLoop:
 	CALL	CrLf
 	CALL	CrLf
 	
+	; farewell
 	PUSH	OFFSET goodbyeMsg
 	CALL	farewell
 	CALL	CrLf
 
 	Invoke ExitProcess,0				; Exit to operating system.
+	
 main ENDP
-
-; (insert additional procedures here)
 
 ;---------------------------------------------------------------------------------
 ; Name: introduction
@@ -228,6 +234,7 @@ main ENDP
 ;
 ; Returns: EBP value is restored.  EDX value is restored inside the macro.
 ;---------------------------------------------------------------------------------
+
 introduction	PROC
 	
 	PUSH	EBP			; Build stack frame.
@@ -257,12 +264,22 @@ introduction	PROC
 introduction	ENDP
 
 ;---------------------------------------------------------------------------------
+; Name: readVal
 ;
+; Invokes mGetString to receive user input, converts the input string to integer,
+;	and stores it in an array.
 ;
+; Preconditions: OFFSETs to null-terminated strings and empty array and other values
+;	are present on the stack.
 ;
+; Postconditions: The array is filled with signed integers.  Depending on the input
+;	received, error message may be displayed.  Register values change depending
+;	on the user input.
 ;
+; Receives: OFFSETs to an empty array, messages, and various values.  EAX, EDI, ECX, 
+;	EBP, EBX, EDX, ESI, and EDI.
 ;
-;
+; Returns: EBP value is restored.
 ;---------------------------------------------------------------------------------
 
 readVal		PROC
@@ -328,7 +345,6 @@ _positiveInt:
 			LOOP	_positiveIntLoop
 	JMP	_done
 
-
 _negativeInt:	
 	DEC	ECX								; Because the first character was a unary symbol.
 
@@ -364,12 +380,21 @@ _done:
 readVal		ENDP
 
 ;---------------------------------------------------------------------------------
+; Name: writeVal
 ;
+; Converts integers (numeric) to strings (ASCII) and invokes mDisplayString to
+;	display.
 ;
+; Preconditions: OFFSETs to various null-terminated strings and other values are 
+;	present on the stack.
 ;
+; Postconditions: The array element is displayed in ASCII representation.  Register
+;	values change depending on the data passed to them.
 ;
+; Receives: OFFSETs to an array, message, and various values.  EBP, ESP, ESI, EDI,
+;	ECX, EAX, EBX, and EDX.
 ;
-;
+; Returns: ESI, EDI, and EBP values are restored.
 ;---------------------------------------------------------------------------------
 
 writeVal	PROC
@@ -504,12 +529,21 @@ _done:
 writeVal	ENDP
 
 ;---------------------------------------------------------------------------------
+; Name: numSumDisplay
 ;
+; Calculates the total sum of the numbers entered, converts it to ASCII, and
+;	displays the result.
 ;
+; Preconditions: The array consisting of integers and null-terminated strings are
+;	present on the stack.
 ;
+; Postconditions: All numbers in the array are added up and displayed.  Registers
+;	change their values depending on the data passed to them.
 ;
-;
-;
+; Receives: OFFSETs to strings and various values.  EAX, EBP, ESP, ESI, EDI, EDX,
+;	ECX, and EBX.
+; 
+; Returns: EBP, ESI, and EDI values are restored.
 ;---------------------------------------------------------------------------------
 
 numSumDisplay	PROC
@@ -549,7 +583,6 @@ numSumDisplay	PROC
 	JMP	_finishConvert
 	
 _convertToStr:
-	
 	CMP	EAX, 0
 	JE	_finishConvert
 	INC	ECX
@@ -647,12 +680,21 @@ _done:
 numSumDisplay	ENDP
 
 ;---------------------------------------------------------------------------------
+; Name: numAveDisplay
 ;
+; Calculates the average of the numbers in the array, converts the result (integer
+;	part) to ASCII, and displays the result.
 ;
+; Preconditions: The array consisting of integers and null-terminated strings are
+;	present on the stack.
 ;
+; Postconditions: The truncated average of all numbers is calculated and displayed.  
+;	Registers change their values depending on the data passed to them.
 ;
+; Receives: OFFSETs to strings and various values.  EAX, EBP, ESP, ESI, EDI, EDX,
+;	ECX, and EBX.
 ;
-;
+; Returns: EBP, ESI, and EDI values are restored.
 ;---------------------------------------------------------------------------------
 
 numAveDisplay	PROC
@@ -795,12 +837,17 @@ _done:
 numAveDisplay	ENDP
 
 ;---------------------------------------------------------------------------------
+; Name: farewell
 ;
+; Displays the farewell message using mDisplayString.
 ;
+; Preconditions: A null-terminated goodbye message is present on the stack.
 ;
+; Postconditions: The string is displayed.  EDX holds the OFFSET to the string.
 ;
+; Receives: OFFSET to the string, EBP, ESP, and EDX.
 ;
-;
+; Returns: EBP value is restored.
 ;---------------------------------------------------------------------------------
 
 farewell	PROC
@@ -814,6 +861,5 @@ farewell	PROC
 	RET	4
 
 farewell	ENDP
-
 
 END main
