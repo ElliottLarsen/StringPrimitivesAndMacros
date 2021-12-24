@@ -77,7 +77,7 @@ ENDM
 	programmerName	BYTE	"By Elliott Larsen", 0
 	introMsg1	BYTE	"Please provide 10 signed decimal integers.", 0
 	introMsg2	BYTE	"Each number must be small enough to fit inside a 32-bit register. After all 10 integers are received,", 0 
-	introMsg3	BYTE	"this program will display the a list of entered integers, their sum, and truncated average.", 0
+	introMsg3	BYTE	"this program will display the list of entered integers, their sum, and truncated average.", 0
 
 	numPrompt	BYTE	"Please enter a signed number: ", 0
 	errorMsg1	BYTE	"ERROR: Your input is not recognized.", 0
